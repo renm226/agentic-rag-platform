@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.Column('doc_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('text', sa.Text(), nullable=False),
         sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column('embedding', postgresql.VECTOR(1536), nullable=True),
+        sa.Column('embedding', postgresql.VECTOR(768), nullable=True),
         sa.ForeignKeyConstraint(['doc_id'], ['documents.id'], ),
         sa.PrimaryKeyConstraint('id')
     )

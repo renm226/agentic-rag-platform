@@ -28,6 +28,9 @@ openai>=1.13.0,<2.0.0
 # CrewAI multi-agent framework
 crewai>=0.80.0,<2.0.0
 
+# Groq — fast free LLM inference (LiteLLM/CrewAI needs this package to route to Groq)
+groq>=0.9.0
+
 # Document processing
 sentence-transformers==2.2.2
 chromadb==0.4.18

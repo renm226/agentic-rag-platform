@@ -1,0 +1,44 @@
+# Render Infrastructure-as-Code
+# Deploy with: connect this repo on https://dashboard.render.com
+# Free-tier note: web service spins down after 15 min of inactivity (cold start ~30s)
+
+services:
+  - type: web
+    name: knowledgeops-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+
+    envVars:
+      # ── Required — set these in the Render dashboard ───────────────────
+      - key: OPENAI_API_KEY
+        sync: false          # paste your key in the Render dashboard
+
+      # ── Database (Supabase recommended — see README) ───────────────────
+      # Format: postgresql+asyncpg://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+      - key: DATABASE_URL
+        sync: false
+
+      # ── Redis (Upstash recommended — see README) ───────────────────────
+      # Format: redis://default:<password>@<host>.upstash.io:6379
+      - key: REDIS_URL
+        sync: false
+
+      # ── Auto-generated ─────────────────────────────────────────────────
+      - key: SECRET_KEY
+        generateValue: true
+
+      # ── Optional — update after first deploy with your actual Render URL ─
+      # https://<your-service-name>.onrender.com
+      # Enables the Retrieval Specialist agent to do targeted re-searches.
+      - key: API_BASE_URL
+        sync: false
+
+      # ── Sane defaults ──────────────────────────────────────────────────
+      - key: DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: OPENAI_MODEL
+        value: gpt-3.5-turbo

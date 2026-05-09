@@ -7,7 +7,7 @@ import time
 
 from langgraph.graph import StateGraph, END
 from openai import OpenAI
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from app.retrieval import RetrievalQAChain, AdvancedRetriever, RetrievalResult, QAResult
 from app.logging import get_logger
@@ -39,9 +39,13 @@ class AgentState:
 class QueryReformulator:
     """Handles query reformulation strategies."""
 
-    def __init__(self, openai_api_key: str, model_name: str = "gpt-3.5-turbo"):
+    def __init__(self, openai_api_key: str, model_name: str = "llama-3.3-70b-versatile"):
         self.model_name = model_name
-        self._client = OpenAI(api_key=openai_api_key)
+        # Groq exposes an OpenAI-compatible endpoint — no other change needed
+        self._client = OpenAI(
+            api_key=openai_api_key,
+            base_url="https://api.groq.com/openai/v1",
+        )
 
     def extract_keywords_from_chunks(
         self, chunks: List[RetrievalResult], max_keywords: int = 5
@@ -162,7 +166,8 @@ class IntelligentQAAgent:
         openai_api_key: str,
         confidence_threshold: float = 0.7,
         max_attempts: int = 2,
-        model_name: str = "gpt-3.5-turbo",
+        model_name: str = "llama-3.3-70b-versatile",
+        embedding_model: str = "BAAI/bge-base-en-v1.5",
     ):
         self.session = session
         self.org_id = org_id
@@ -170,6 +175,7 @@ class IntelligentQAAgent:
         self.confidence_threshold = confidence_threshold
         self.max_attempts = max_attempts
         self.model_name = model_name
+        self._embedding_model = embedding_model
 
         self.qa_chain = RetrievalQAChain(
             session=session,
@@ -211,8 +217,10 @@ class IntelligentQAAgent:
     async def _initial_retrieval(self, state: AgentState) -> AgentState:
         logger.info("Starting initial retrieval", query=state.query, attempt=state.current_attempt)
         try:
-            embeddings = OpenAIEmbeddings(
-                openai_api_key=self.openai_api_key, model="text-embedding-ada-002"
+            embeddings = HuggingFaceEmbeddings(
+                model_name=self._embedding_model,
+                model_kwargs={"device": "cpu"},
+                encode_kwargs={"normalize_embeddings": True},
             )
             query_embedding = embeddings.embed_query(state.query)
             qa_result = await self.qa_chain.answer_question(
@@ -309,8 +317,10 @@ class IntelligentQAAgent:
     async def _re_retrieval(self, state: AgentState) -> AgentState:
         logger.info("Performing re-retrieval", query=state.query, attempt=state.current_attempt)
         try:
-            embeddings = OpenAIEmbeddings(
-                openai_api_key=self.openai_api_key, model="text-embedding-ada-002"
+            embeddings = HuggingFaceEmbeddings(
+                model_name=self._embedding_model,
+                model_kwargs={"device": "cpu"},
+                encode_kwargs={"normalize_embeddings": True},
             )
             query_embedding = embeddings.embed_query(state.query)
             qa_result = await self.qa_chain.answer_question(

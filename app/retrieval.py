@@ -307,7 +307,7 @@ class RetrievalQAChain:
         session: AsyncSession,
         org_id: str,
         openai_api_key: str,
-        model_name: str = "gpt-3.5-turbo",
+        model_name: str = "llama-3.3-70b-versatile",
         max_tokens: int = 4000,
         temperature: float = 0.1
     ):
@@ -411,9 +411,12 @@ Answer:"""
             # Step 2: Create prompt
             prompt = self._create_prompt(query, contexts)
             
-            # Step 3: Generate answer using OpenAI
+            # Step 3: Generate answer via Groq (OpenAI-compatible API)
             from openai import OpenAI as _OpenAI
-            _client = _OpenAI(api_key=self.openai_api_key)
+            _client = _OpenAI(
+                api_key=self.openai_api_key,
+                base_url="https://api.groq.com/openai/v1",
+            )
             response = _client.chat.completions.create(
                 model=self.model_name,
                 messages=[

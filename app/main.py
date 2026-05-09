@@ -33,7 +33,7 @@ from app.tasks.document_processing import process_document, process_document_bat
 from app.retrieval import RetrievalQAChain, AdvancedRetriever
 from app.agent import IntelligentQAAgent
 from app.crew import RAGCrew
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 # Configure logging
@@ -198,12 +198,13 @@ async def query_documents(
         org_id = request.filters.get("org_id", "default") if request.filters else "default"
         
         # Initialize embeddings model
-        if not settings.openai_api_key:
-            raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+        if not settings.xai_api_key:
+            raise HTTPException(status_code=500, detail="XAI_API_KEY not configured")
         
-        embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.openai_api_key,
-            model="text-embedding-ada-002"
+        embeddings = HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True},
         )
         
         # Generate query embedding
@@ -213,8 +214,8 @@ async def query_documents(
         qa_chain = RetrievalQAChain(
             session=db,
             org_id=org_id,
-            openai_api_key=settings.openai_api_key,
-            model_name=settings.openai_model,
+            openai_api_key=settings.xai_api_key,
+            model_name=settings.xai_model,
             max_tokens=4000
         )
         
@@ -423,12 +424,13 @@ async def retrieve_documents(
     start_time = time.time()
     try:
         # Initialize embeddings model
-        if not settings.openai_api_key:
-            raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+        if not settings.xai_api_key:
+            raise HTTPException(status_code=500, detail="XAI_API_KEY not configured")
         
-        embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.openai_api_key,
-            model="text-embedding-ada-002"
+        embeddings = HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True},
         )
         
         # Generate query embedding
@@ -499,16 +501,16 @@ async def intelligent_query(
     """Query documents using intelligent agent with query reformulation"""
     try:
         # Initialize intelligent agent
-        if not settings.openai_api_key:
-            raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+        if not settings.xai_api_key:
+            raise HTTPException(status_code=500, detail="XAI_API_KEY not configured")
         
         agent = IntelligentQAAgent(
             session=db,
             org_id=org_id,
-            openai_api_key=settings.openai_api_key,
+            openai_api_key=settings.xai_api_key,
             confidence_threshold=confidence_threshold,
             max_attempts=max_attempts,
-            model_name=settings.openai_model
+            model_name=settings.xai_model
         )
         
         # Get intelligent answer
@@ -583,8 +585,8 @@ async def crew_query(
     """
     import asyncio
 
-    if not settings.openai_api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+    if not settings.xai_api_key:
+        raise HTTPException(status_code=500, detail="XAI_API_KEY not configured")
 
     start_time = time.time()
     query = request.query
@@ -592,9 +594,10 @@ async def crew_query(
 
     try:
         # ── 1. Async retrieval ──────────────────────────────────────────
-        embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.openai_api_key,
-            model="text-embedding-ada-002",
+        embeddings = HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True},
         )
         query_embedding = embeddings.embed_query(query)
 
@@ -620,8 +623,8 @@ async def crew_query(
 
         # ── 2. Run crew in thread pool (kickoff is synchronous) ─────────
         crew = RAGCrew(
-            openai_api_key=settings.openai_api_key,
-            model_name=settings.openai_model,
+            openai_api_key=settings.xai_api_key,
+            model_name=settings.xai_model,
             api_base_url=settings.api_base_url,
             org_id=org_id,
             verbose=request.verbose,

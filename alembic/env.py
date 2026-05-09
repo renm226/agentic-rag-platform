@@ -30,9 +30,11 @@ target_metadata = Base.metadata
 # ... etc.
 
 
-def get_url():
-    """Get database URL from settings"""
-    return settings.database_url
+def get_url() -> str:
+    """Return a sync-driver URL for Alembic (psycopg2 instead of asyncpg)."""
+    url = settings.database_url
+    # The app uses asyncpg; Alembic needs a sync driver (psycopg2-binary is in requirements)
+    return url.replace("postgresql+asyncpg://", "postgresql://")
 
 
 def run_migrations_offline() -> None:

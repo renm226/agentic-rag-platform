@@ -35,9 +35,15 @@ class Settings(BaseSettings):
     algorithm: str = Field(default="HS256", env="ALGORITHM")
     access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     
-    # LLM Configuration
-    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    openai_model: str = Field(default="gpt-3.5-turbo", env="OPENAI_MODEL")
+    # LLM — xAI Grok (https://console.x.ai)
+    xai_api_key: Optional[str] = Field(default=None, env="XAI_API_KEY")
+    xai_model: str = Field(default="grok-beta", env="XAI_MODEL")
+
+    # Embeddings — sentence-transformers runs locally, no API key needed
+    # Produces 768-dim vectors; change model here to experiment
+    embedding_model: str = Field(
+        default="BAAI/bge-base-en-v1.5", env="EMBEDDING_MODEL"
+    )
     
     # Vector Database
     vector_db_url: str = Field(

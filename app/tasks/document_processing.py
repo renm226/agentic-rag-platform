@@ -17,7 +17,7 @@ from langchain_community.document_loaders import (
     UnstructuredFileLoader,
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -103,12 +103,13 @@ def chunk_documents(documents: List[Document], chunk_size: int = 800, chunk_over
 def generate_embeddings(texts: List[str]) -> List[List[float]]:
     """Generate embeddings using OpenAI embeddings"""
     try:
-        if not settings.openai_api_key:
-            raise ValueError("OpenAI API key not configured")
+        if not settings.embedding_model:
+            raise ValueError("EMBEDDING_MODEL not configured")
         
-        embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.openai_api_key,
-            model="text-embedding-ada-002"
+        embeddings = HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True},
         )
         
         # Generate embeddings in batches to avoid rate limits

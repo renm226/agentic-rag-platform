@@ -37,7 +37,7 @@ class Chunk(Base):
     doc_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False, index=True)
     text = Column(Text, nullable=False)
     metadata = Column(JSONB, nullable=True)  # JSON metadata for the chunk
-    embedding = Column("embedding", sa.dialects.postgresql.VECTOR(1536), nullable=True)
+    embedding = Column("embedding", sa.dialects.postgresql.VECTOR(768), nullable=True)
     
     # Relationships
     document = relationship("Document", back_populates="chunks")
