@@ -80,14 +80,18 @@ class RAGCrew:
 
     def __init__(
         self,
-        openai_api_key: str,           # holds the Groq API key
-        model_name: str = "llama-3.3-70b-versatile",
+        openai_api_key: str,           # holds the xAI API key
+        model_name: str = "grok-beta",
         api_base_url: Optional[str] = None,
         org_id: str = "default",
         verbose: bool = False,
     ):
-        # CrewAI uses LiteLLM routing; prefix "groq/" tells it which provider to call
-        self._llm = LLM(model=f"groq/{model_name}", api_key=openai_api_key)
+        # xAI is OpenAI-compatible; LiteLLM routes via base_url
+        self._llm = LLM(
+            model=f"openai/{model_name}",
+            api_key=openai_api_key,
+            base_url="https://api.x.ai/v1",
+        )
         self._api_base_url = api_base_url
         self._org_id = org_id
         self._verbose = verbose

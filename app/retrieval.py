@@ -307,7 +307,7 @@ class RetrievalQAChain:
         session: AsyncSession,
         org_id: str,
         openai_api_key: str,
-        model_name: str = "llama-3.3-70b-versatile",
+        model_name: str = "grok-beta",
         max_tokens: int = 4000,
         temperature: float = 0.1
     ):
@@ -415,7 +415,7 @@ Answer:"""
             from openai import OpenAI as _OpenAI
             _client = _OpenAI(
                 api_key=self.openai_api_key,
-                base_url="https://api.groq.com/openai/v1",
+                base_url="https://api.x.ai/v1",
             )
             response = _client.chat.completions.create(
                 model=self.model_name,

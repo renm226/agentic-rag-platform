@@ -39,12 +39,12 @@ class AgentState:
 class QueryReformulator:
     """Handles query reformulation strategies."""
 
-    def __init__(self, openai_api_key: str, model_name: str = "llama-3.3-70b-versatile"):
+    def __init__(self, openai_api_key: str, model_name: str = "grok-beta"):
         self.model_name = model_name
         # Groq exposes an OpenAI-compatible endpoint — no other change needed
         self._client = OpenAI(
             api_key=openai_api_key,
-            base_url="https://api.groq.com/openai/v1",
+            base_url="https://api.x.ai/v1",
         )
 
     def extract_keywords_from_chunks(
@@ -166,7 +166,7 @@ class IntelligentQAAgent:
         openai_api_key: str,
         confidence_threshold: float = 0.7,
         max_attempts: int = 2,
-        model_name: str = "llama-3.3-70b-versatile",
+        model_name: str = "grok-beta",
         embedding_model: str = "BAAI/bge-base-en-v1.5",
     ):
         self.session = session
