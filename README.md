@@ -1,399 +1,122 @@
-#  KnowledgeOps AI
+# KnowledgeOps AI
 
-End-to-end document intelligence platform: ingest → embed → retrieve → answer → monitor.
+A production-grade document intelligence platform — upload documents, ask questions, get cited answers powered by a multi-agent AI pipeline.
 
-## Screenshots
+**Stack:** FastAPI · PostgreSQL/pgvector · LangGraph · CrewAI · Celery · Redis · Prometheus/Grafana · xAI Grok · sentence-transformers
 
-<div align="center">
-  <img src="docs/img1.png" alt="Main Dashboard" width="45%" />
-  <img src="docs/img2.png" alt="Query Interface" width="45%" />
-  <br>
-  <img src="docs/img3.png" alt="Document Processing" width="45%" />
-  <img src="docs/img4.png" alt="Analytics Dashboard" width="45%" />
-  <br>
-  <img src="docs/img5.png" alt="Grafana Monitoring" width="45%" />
-  <img src="docs/img6.png" alt="Evaluation Report" width="45%" />
-</div>
+---
 
-### Screenshot Descriptions
+## What it does
 
-| Screenshot | Description |
-|------------|-------------|
-| **Main Dashboard** | Overview of the KnowledgeOps AI platform with document uploads, query performance metrics, and system health indicators |
-| **Query Interface** | AI-powered question-answering interface with confidence scores, source attribution, and chat-like experience |
-| **Document Processing** | File upload and processing workflow with real-time status updates and progress tracking |
-| **Analytics Dashboard** | Performance analytics with query volume, response times, success rates, and data visualizations |
-| **Grafana Monitoring** | Real-time system monitoring with Prometheus metrics, query performance, and token usage tracking |
-| **Evaluation Report** | RAG pipeline evaluation results with relevance@k scores, faithfulness metrics, and performance analysis |
+1. **Ingest** — upload PDFs, HTML pages, or plain text; a Celery worker chunks and embeds them locally (no OpenAI embeddings needed)
+2. **Retrieve** — hybrid BM25 + vector similarity search against pgvector, with deduplication and token-budget enforcement
+3. **Answer** — three query modes:
+   - `/query` — standard RAG answer with confidence score
+   - `/query/intelligent` — LangGraph agent that reformulates low-confidence queries and retries
+   - `/query/crew` — CrewAI pipeline with four sequential agents (Query Planner → Retrieval Specialist → Answer Synthesizer → Fact Checker)
+4. **Monitor** — structured JSON logs + Prometheus metrics + Grafana dashboard out of the box
 
-## Overview
-
-KnowledgeOps AI is a comprehensive document intelligence platform that provides:
-
-- **Document Ingestion**: Support for PDFs, Docs, HTML, and URLs
-- **Vector Search**: Hybrid BM25 + vector retrieval
-- **RAG Pipeline**: Context-aware question answering
-- **Observability**: Structured logging and Prometheus metrics
-- **Multi-tenant**: JWT authentication and RBAC
+---
 
 ## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   FastAPI App   │    │   Celery/RQ     │    │   PostgreSQL    │
-│   (REST API)    │───▶│   (Async Jobs)  │───▶│   + pgvector    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Prometheus    │    │     Redis       │    │   Vector DB     │
-│   (Metrics)     │    │   (Queue/Cache) │    │   (Embeddings)  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+                    ┌──────────────────────────────────────┐
+                    │            FastAPI (async)            │
+                    │  /ingest  /query  /query/crew  /docs  │
+                    └────────────┬──────────────────────────┘
+                                 │
+              ┌──────────────────┼────────────────────┐
+              ▼                  ▼                     ▼
+    ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐
+    │  Celery Worker   │  │  LangGraph   │  │  CrewAI (4-agent)│
+    │  (doc chunking + │  │  QA Agent    │  │  multi-step RAG  │
+    │   embeddings)    │  │  (reformulate│  │  pipeline        │
+    └────────┬─────────┘  │   & retry)   │  └──────────────────┘
+             │            └──────┬───────┘
+             ▼                   ▼
+    ┌──────────────────────────────────────┐
+    │   PostgreSQL + pgvector extension    │
+    │   (documents · chunks · embeddings)  │
+    └──────────────────────────────────────┘
+             │
+    ┌────────┴────────┐
+    │      Redis      │   ← Celery broker & result backend
+    └─────────────────┘
 ```
 
-## Features
+---
 
-### Implemented
-- FastAPI application with structured logging
-- Pydantic v2 models for request/response validation
-- Async SQLAlchemy database integration
-- Prometheus metrics collection
-- Health check and monitoring endpoints
-- CORS middleware
-- Global exception handling
-- Environment-based configuration
-
-### 🚧 In Progress
-- Document ingestion pipeline
-- RAG query processing
-- Authentication and authorization
-- Admin UI
-
-### ✅ Database Setup Complete
-- PostgreSQL with pgvector extension
-- Alembic migrations for schema management
-- SQLAlchemy models for documents, chunks, conversations
-- Vector similarity search support
-- Multi-tenant organization support
-
-### ✅ Document Processing Complete
-- Celery worker for async document processing
-- LangChain document loaders (PDF, HTML, Text)
-- Text chunking with configurable size and overlap
-- OpenAI embeddings generation
-- Structured logging and progress tracking
-- Batch document processing support
-
-### ✅ Advanced Retrieval Complete
-- Vector similarity search with pgvector
-- BM25 reranking for improved relevance
-- Chunk deduplication to avoid redundancy
-- Token budget enforcement for LLM context
-- RetrievalQA chain with confidence scoring
-- Source attribution and metadata tracking
-
-### ✅ Intelligent QA Agent Complete
-- LangGraph-based query reformulation agent
-- Automatic confidence threshold checking
-- Keyword extraction from top chunks
-- Metadata filter extraction and application
-- Multi-attempt comparison and selection
-- Detailed observability with attempt scores
-
-### ✅ Prometheus Metrics Complete
-- Comprehensive query performance metrics
-- Token usage tracking (input/output)
-- Retrieval performance monitoring
-- Intelligent agent metrics
-- Grafana dashboard with 12 panels
-- Real-time observability and alerting
-
-### ✅ RAG Evaluation System Complete
-- Comprehensive evaluation pipeline with CSV input
-- Relevance@k scoring (k=1,3,5,10) for retrieval quality
-- Faithfulness scoring using LLM-as-judge
-- HTML reports with interactive charts
-- Processing time and error tracking
-- Sample evaluation dataset included
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.9+
-- PostgreSQL with pgvector extension
-- Redis (for Celery)
-
-## Evaluation
-
-### RAG Pipeline Evaluation
-The platform includes a comprehensive evaluation system for testing RAG pipeline performance:
+## Run locally (Docker — one command)
 
 ```bash
-# Test evaluation system
-python test_eval.py
+git clone <repo-url>
+cd agentic-rag-platform
 
-# Run evaluation on sample data
-python scripts/eval.py scripts/sample_eval_data.csv --openai-key YOUR_KEY
+cp env.example .env
+# Add your XAI_API_KEY to .env (get one free at console.x.ai)
 
-# Run evaluation with custom parameters
-python scripts/eval.py your_eval_data.csv \
-  --output custom_report.html \
-  --api-url http://localhost:8000 \
-  --org-id your-org \
-  --max-examples 50
+docker compose up -d
 ```
 
-### Evaluation Metrics
-- **Relevance@k**: Measures retrieval quality at different k values (1, 3, 5, 10)
-- **Faithfulness**: LLM-as-judge scoring for answer faithfulness to source material
-- **Processing Time**: Performance tracking for optimization
-- **Error Tracking**: Comprehensive error reporting and analysis
+Open **http://localhost:8000/docs** for the interactive API.  
+Grafana dashboard: **http://localhost:3000** (admin / admin)
 
-### CSV Format
-The evaluation script expects a CSV with the following columns:
-- `question`: The query to evaluate
-- `gold_doc_id`: Expected document ID (optional)
-- `gold_text`: Expected text content (optional)
+---
 
-### HTML Reports
-Generated reports include:
-- Performance summary with key metrics
-- Interactive charts for relevance and faithfulness distributions
-- Detailed results for each evaluation example
-- Error analysis for failed evaluations
-- Docker (optional)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd knowledgeops-ai
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment**
-   ```bash
-   cp env.example .env
-   # Edit .env with your configuration
-   ```
-
-4. **Set up database**
-   ```bash
-   # Create PostgreSQL database with pgvector extension
-   createdb knowledgeops
-   psql knowledgeops -c "CREATE EXTENSION IF NOT EXISTS vector;"
-   
-   # Run database migrations
-   python migrate.py
-   ```
-
-5. **Start services**
-   ```bash
-   # Start Redis (for Celery)
-   redis-server
-   
-   # Start Celery worker (in new terminal)
-   python worker.py
-   
-   # Start FastAPI application
-   python run.py
-   ```
-
-5. **Run the application**
-   ```bash
-   python -m app.main
-   ```
-
-The API will be available at `http://localhost:8000`
-
-### Docker Setup
+## Run without Docker
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
+python -m venv venv && venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+
+cp env.example .env  # fill in DATABASE_URL, REDIS_URL, XAI_API_KEY
+
+python migrate.py                              # run DB migrations
+
+# Terminal 1 — Celery worker
+celery -A app.celery_app worker --loglevel=info
+
+# Terminal 2 — API server
+uvicorn app.main:app --reload --port 8000
 ```
 
-## API Endpoints
+---
 
-### Health & Monitoring
-- `GET /health` - Health check
-- `GET /metrics` - Prometheus metrics
-- `GET /docs` - Interactive API documentation
+## Key API endpoints
 
-### Document Management
-- `POST /ingest` - Ingest documents for processing
-- `POST /ingest/batch` - Ingest multiple documents in batch
-- `GET /documents` - List ingested documents
-- `GET /documents/{id}` - Get document details
-- `GET /stats/{org_id}` - Get organization statistics
-- `GET /tasks/{task_id}` - Get Celery task status
+| Method | Endpoint | What it does |
+|--------|----------|--------------|
+| `POST` | `/ingest` | Upload a document (URL or file path) |
+| `POST` | `/query` | Standard RAG — returns answer + sources + confidence |
+| `POST` | `/query/intelligent` | LangGraph agent — reformulates & retries if confidence is low |
+| `POST` | `/query/crew` | 4-agent CrewAI pipeline for complex multi-part questions |
+| `POST` | `/retrieve` | Raw hybrid retrieval (no answer generation) |
+| `GET`  | `/documents` | List ingested documents |
+| `GET`  | `/stats/{org_id}` | Usage stats per organisation |
+| `GET`  | `/metrics` | Prometheus metrics |
+| `GET`  | `/health` | Health check |
 
-### Query Interface
-- `POST /query` - Query documents using RAG with answer generation
-- `POST /retrieve` - Retrieve relevant documents without answer generation
-- `POST /query/intelligent` - Intelligent QA with query reformulation
-- `GET /queries` - List recent queries
-- `GET /queries/{id}` - Get query details
+---
 
-## Configuration
+## Environment variables
 
-Key environment variables:
+| Variable | Description |
+|----------|-------------|
+| `XAI_API_KEY` | xAI Grok API key — free tier at console.x.ai |
+| `XAI_MODEL` | Model name (default: `grok-beta`) |
+| `EMBEDDING_MODEL` | Local embedding model (default: `BAAI/bge-base-en-v1.5`) |
+| `DATABASE_URL` | PostgreSQL + asyncpg connection string |
+| `REDIS_URL` | Redis connection string |
+| `SECRET_KEY` | JWT secret |
+| `API_BASE_URL` | Self-call URL for CrewAI re-retrieval tool (Docker: `http://app:8000`) |
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://user:password@localhost/knowledgeops` |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
-| `OPENAI_API_KEY` | OpenAI API key | `None` |
-| `SECRET_KEY` | JWT secret key | `your-secret-key-change-in-production` |
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `DEBUG` | Debug mode | `false` |
+---
 
-## Development
+## Technical highlights
 
-### Project Structure
-
-```
-knowledgeops-ai/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application
-│   ├── config.py            # Configuration management
-│   ├── database.py          # Database setup
-│   ├── models.py            # Pydantic models
-│   ├── models_db.py         # SQLAlchemy database models
-│   ├── db_utils.py          # Database utility functions
-│   ├── logging.py           # Structured logging
-│   ├── metrics.py           # Prometheus metrics
-│   ├── retrieval.py         # Advanced retrieval system
-│   ├── agent.py             # LangGraph intelligent agent
-│   ├── celery_app.py        # Celery configuration
-│   └── tasks/
-│       ├── __init__.py      # Tasks package
-│       └── document_processing.py  # Document processing tasks
-├── alembic/                 # Database migrations
-│   ├── env.py              # Alembic environment
-│   ├── script.py.mako      # Migration template
-│   └── versions/           # Migration files
-├── tests/                   # Test suite
-├── docker/                  # Docker configuration
-├── requirements.txt         # Python dependencies
-├── env.example             # Environment template
-├── run.py                  # Startup script
-├── worker.py               # Celery worker script
-├── demo.py                 # API demo
-├── migrate.py              # Database migration script
-├── test_setup.py           # Setup verification
-├── test_db.py              # Database setup verification
-├── test_celery.py          # Celery setup verification
-├── test_retrieval.py       # Retrieval system verification
-├── test_agent.py           # LangGraph agent verification
-├── test_metrics.py         # Prometheus metrics verification
-├── test_eval.py            # RAG evaluation system verification
-├── grafana-dashboard.json  # Grafana dashboard configuration
-├── scripts/                # Evaluation scripts
-│   ├── eval.py             # RAG evaluation pipeline
-│   └── sample_eval_data.csv # Sample evaluation dataset
-├── DATABASE.md             # Database documentation
-└── README.md               # This file
-```
-
-### Running Tests
-
-```bash
-pytest tests/
-```
-
-### Code Quality
-
-```bash
-# Format code
-black app/ tests/
-
-# Lint code
-flake8 app/ tests/
-
-# Type checking
-mypy app/
-```
-
-## Monitoring
-
-### Metrics
-
-The application exposes Prometheus metrics at `/metrics`:
-
-- HTTP request counts and durations
-- Document ingestion job status
-- Query processing metrics
-- Database connection counts
-- System resource usage
-
-### Logging
-
-Structured JSON logging is configured with:
-
-- Request/response logging
-- Error tracking with context
-- Performance metrics
-- Business event logging
-
-### Health Checks
-
-Health check endpoint at `/health` provides:
-
-- Application status
-- Database connectivity
-- External service status
-- Version information
-
-## Deployment
-
-### Production Checklist
-
-- [ ] Set `DEBUG=false`
-- [ ] Configure proper `SECRET_KEY`
-- [ ] Set up PostgreSQL with pgvector
-- [ ] Configure Redis for Celery
-- [ ] Set up monitoring (Prometheus/Grafana)
-- [ ] Configure reverse proxy (nginx)
-- [ ] Set up SSL certificates
-- [ ] Configure backup strategy
-
-### Docker Deployment
-
-```bash
-# Build production image
-docker build -t knowledgeops-ai .
-
-# Run with environment variables
-docker run -d \
-  -p 8000:8000 \
-  --env-file .env \
-  knowledgeops-ai
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Support
-
-For support and questions:
-
-- Create an issue on GitHub
-- Check the documentation at `/docs`
-- Review the API documentation at `/redoc`
+- **Zero-cost LLM** — xAI Grok via OpenAI-compatible API; local sentence-transformers for embeddings (no per-query embedding cost)
+- **Multi-agent reasoning** — CrewAI orchestrates four specialised agents; each agent verifies the previous step's output before proceeding
+- **Adaptive retrieval** — LangGraph agent detects low-confidence answers and reformulates the query using keywords extracted from the initial results
+- **Async throughout** — FastAPI + asyncpg + SQLAlchemy 2.0; Celery offloads heavy document processing so the API stays non-blocking
+- **Observable** — every query records latency, token counts, confidence scores, and agent attempts to Prometheus; pre-built Grafana dashboard included
