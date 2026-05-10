@@ -1,4 +1,4 @@
-# KnowledgeOps AI
+# Agentic RAG 
 
 A production-grade document intelligence platform — upload documents, ask questions, get cited answers powered by a multi-agent AI pipeline.
 
@@ -54,7 +54,7 @@ git clone <repo-url>
 cd agentic-rag-platform
 
 cp env.example .env
-# Add your XAI_API_KEY to .env (get one free at console.x.ai)
+# Add your XAI_API_KEY to .env can use free tire
 
 docker compose up -d
 ```

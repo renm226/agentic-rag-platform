@@ -39,6 +39,6 @@ celery_app.conf.task_routes = {
 # Optional: Configure task-specific settings
 celery_app.conf.task_annotations = {
     "app.tasks.document_processing.process_document": {
-        "rate_limit": "10/m",  # Max 10 tasks per minute
+        "rate_limit": "10/m",  
     }
 }
